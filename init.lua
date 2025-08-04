@@ -642,7 +642,11 @@ require('lazy').setup({
             },
           },
         },
-        ruff = {},
+        ruff = {
+          on_attach = function(client, _)
+            client.server_capabilities.hoverProvider = false
+          end,
+        },
       }
 
       -- Ensure the servers and tools above are installed
@@ -659,6 +663,7 @@ require('lazy').setup({
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
         'ruff',
+        'pyright',
         'gopls',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
