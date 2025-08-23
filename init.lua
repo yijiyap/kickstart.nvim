@@ -1,3 +1,6 @@
+vim.env.JAVA_HOME = '/usr/lib/jvm/java-21-openjdk-amd64'
+vim.env.PATH = vim.env.JAVA_HOME .. '/bin:' .. vim.env.PATH
+
 --[[
 
 =====================================================================
@@ -665,12 +668,17 @@ require('lazy').setup({
         'ruff',
         'pyright',
         'gopls',
+        'jdtls',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
       require('mason-lspconfig').setup {
         handlers = {
           function(server_name)
+            if server_name == 'jdtls' then
+              require('custom.plugins.jdtls').setup()
+              return
+            end
             local server = servers[server_name] or {}
             -- This handles overriding only values explicitly passed
             -- by the server configuration above. Useful when disabling
@@ -906,7 +914,23 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'python', 'go' },
+      ensure_installed = {
+        'bash',
+        'c',
+        'diff',
+        'html',
+        'lua',
+        'luadoc',
+        'markdown',
+        'markdown_inline',
+        'query',
+        'vim',
+        'vimdoc',
+        'python',
+        'go',
+        'dockerfile',
+        'csv',
+      },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
