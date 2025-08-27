@@ -60,7 +60,7 @@ return {
           vim.fn.stdpath 'cache' .. '/jdtls/' .. vim.fn.fnamemodify(vim.fn.getcwd(), ':t'),
         },
 
-        root_dir = vim.fs.root(0, { 'mvnw', 'gradlew' }),
+        root_dir = vim.fs.root(0, { 'mvnw', 'gradlew', '.git' }),
 
         on_attach = lspconfiguser.on_attach,
 
