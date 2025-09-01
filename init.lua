@@ -1,6 +1,3 @@
-vim.env.JAVA_HOME = '/usr/lib/jvm/java-21-openjdk-amd64'
-vim.env.PATH = vim.env.JAVA_HOME .. '/bin:' .. vim.env.PATH
-
 --[[
 
 =====================================================================
@@ -668,7 +665,6 @@ require('lazy').setup({
         'ruff',
         'pyright',
         'gopls',
-        'jdtls',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
