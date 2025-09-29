@@ -615,7 +615,7 @@ require('lazy').setup({
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
-        -- clangd = {},
+        clangd = {},
         gopls = {},
         pyright = {},
         -- rust_analyzer = {},
@@ -647,6 +647,7 @@ require('lazy').setup({
             client.server_capabilities.hoverProvider = false
           end,
         },
+        ts_ls = {},
       }
 
       -- Ensure the servers and tools above are installed
@@ -665,6 +666,7 @@ require('lazy').setup({
         'ruff',
         'pyright',
         'gopls',
+        'ts_ls',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -678,6 +680,12 @@ require('lazy').setup({
             server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
             require('lspconfig')[server_name].setup(server)
           end,
+        },
+      }
+
+      require('typescript-tools').setup {
+        server = {
+          on_attach = function(client, bufnr) end,
         },
       }
     end,
@@ -721,7 +729,7 @@ require('lazy').setup({
         python = { 'isort', 'black' },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
-        -- javascript = { "prettierd", "prettier", stop_after_first = true },
+        javascript = { 'prettierd', 'prettier', stop_after_first = true },
       },
     },
   },
@@ -853,7 +861,7 @@ require('lazy').setup({
       -- Load the colorscheme here.
       -- Like many other themes, this one has different styles, and you could load
       -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-moon'
+      vim.cmd.colorscheme 'tokyonight'
 
       -- You can configure highlights by doing something like:
       vim.cmd.hi 'Comment gui=none'
@@ -958,6 +966,7 @@ require('lazy').setup({
   -- require 'kickstart.plugins.neo-tree',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
   require 'kickstart.plugins.oil',
+  require 'kickstart.plugins.typescript-tools',
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
