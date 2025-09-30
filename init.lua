@@ -853,10 +853,23 @@ require('lazy').setup({
       -- Load the colorscheme here.
       -- Like many other themes, this one has different styles, and you could load
       -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-moon'
+      vim.cmd.colorscheme 'tokyonight-day'
 
       -- You can configure highlights by doing something like:
       vim.cmd.hi 'Comment gui=none'
+
+      -- list of schemes to cycle through
+      local colorschemes = { 'tokyonight-day', 'tokyonight-night' }
+      local current = 1
+
+      local function ToggleColorScheme()
+        current = current % #colorschemes + 1
+        vim.cmd('colorscheme ' .. colorschemes[current])
+        print('Switched to colorscheme: ' .. colorschemes[current])
+      end
+
+      vim.api.nvim_create_user_command('ToggleColorScheme', ToggleColorScheme, {})
+      vim.keymap.set('n', '<leader>tc', ToggleColorScheme, { desc = 'Toggle colorscheme' })
     end,
   },
 
