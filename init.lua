@@ -207,6 +207,40 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   end,
 })
 
+-- [[ Theme stuff ]]
+local colorschemes = {
+  { name = 'tokyonight-day', background = 'light' },
+  { name = 'tokyonight-night', background = 'dark' },
+  { name = 'everforest', background = 'dark' },
+}
+
+local current = 1
+
+local function load_colorscheme(cs)
+  vim.o.background = cs.background
+  if cs.name == 'everforest' then
+    vim.g.everforest_background = 'medium'
+    vim.g.everforest_enable_italic = 1
+    vim.g.everforest_better_performance = 1
+  end
+  vim.cmd.colorscheme(cs.name)
+  print('Switched to colorscheme: ' .. cs.name .. ' (' .. cs.background .. ')')
+end
+
+local function ToggleColorScheme()
+  current = current % #colorschemes + 1
+  load_colorscheme(colorschemes[current])
+end
+
+-- commands & keymap
+vim.api.nvim_create_user_command('ToggleColorScheme', ToggleColorScheme, {})
+vim.keymap.set('n', '<leader>tc', ToggleColorScheme, { desc = 'Toggle colorscheme' })
+
+-- load default scheme
+vim.schedule(function()
+  load_colorscheme(colorschemes[current])
+end)
+
 -- [[ Install `lazy.nvim` plugin manager ]]
 --    See `:help lazy.nvim.txt` or https://github.com/folke/lazy.nvim for more info
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
@@ -868,19 +902,17 @@ require('lazy').setup({
 
       -- You can configure highlights by doing something like:
       vim.cmd.hi 'Comment gui=none'
+    end,
+  },
 
-      -- list of schemes to cycle through
-      local colorschemes = { 'tokyonight-day', 'tokyonight-night' }
-      local current = 1
-
-      local function ToggleColorScheme()
-        current = current % #colorschemes + 1
-        vim.cmd('colorscheme ' .. colorschemes[current])
-        print('Switched to colorscheme: ' .. colorschemes[current])
-      end
-
-      vim.api.nvim_create_user_command('ToggleColorScheme', ToggleColorScheme, {})
-      vim.keymap.set('n', '<leader>tc', ToggleColorScheme, { desc = 'Toggle colorscheme' })
+  {
+    'sainnhe/everforest',
+    priority = 900,
+    config = function()
+      -- Optional everforest settings (you can skip this if you want defaults)
+      vim.g.everforest_background = 'medium' -- or 'hard', 'soft'
+      vim.g.everforest_transparent_background = 0
+      vim.g.everforest_enable_italic = 1
     end,
   },
 
