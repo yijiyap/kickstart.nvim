@@ -212,6 +212,7 @@ local colorschemes = {
   { name = 'tokyonight-day', background = 'light' },
   { name = 'tokyonight-night', background = 'dark' },
   { name = 'everforest', background = 'dark' },
+  { name = 'zenbones', background = 'light' },
 }
 
 local current = 1
@@ -915,6 +916,14 @@ require('lazy').setup({
       vim.g.everforest_enable_italic = 1
     end,
   },
+  {
+    'zenbones-theme/zenbones.nvim',
+    dependencies = 'rktjmp/lush.nvim',
+    priority = 900,
+    config = function()
+      vim.g.zenbones_darken_comments = 45
+    end,
+  },
 
   -- Highlight todo, notes, etc in comments
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
@@ -978,6 +987,8 @@ require('lazy').setup({
         'go',
         'dockerfile',
         'csv',
+        'hcl',
+        'terraform',
       },
       -- Autoinstall languages that are not installed
       auto_install = true,
