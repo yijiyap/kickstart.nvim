@@ -982,6 +982,16 @@ do
   vim.pack.add { 'https://github.com/folke/trouble.nvim' }
   require('trouble').setup()
 
+  vim.pack.add {
+    { src = 'https://github.com/nvim-lua/plenary.nvim' },
+    { src = 'https://github.com/MunifTanjim/nui.nvim' },
+    { src = 'https://github.com/kawre/leetcode.nvim' },
+  }
+  require('leetcode').setup {
+    arg = 'leetcode.nvim',
+    lang = 'python3',
+  }
+
   require 'kickstart.plugins.debug'
   require 'kickstart.plugins.indent_line'
   require 'kickstart.plugins.lint'
