@@ -434,18 +434,232 @@ do
   -- - sr)'  - [S]urround [R]eplace [)] [']
   require('mini.surround').setup()
 
-  -- Simple and easy statusline.
-  --  You could remove this setup call if you don't like it,
-  --  and try some other statusline plugin
+  -- Put file metadata in a one-line panel above the global statusline, so a
+  -- long branch name can't push the filename away.
   local statusline = require 'mini.statusline'
+  vim.o.laststatus = 3
+
+  local status_panels = {}
+  local statusline_namespace = vim.api.nvim_create_namespace 'statusline-metadata'
+
+  local function is_normal_window(win, tabpage)
+    if win == nil or not vim.api.nvim_win_is_valid(win) then return false end
+    if tabpage ~= nil and vim.api.nvim_win_get_tabpage(win) ~= tabpage then return false end
+    return vim.api.nvim_win_get_config(win).relative == ''
+  end
+
+  local function current_panel() return status_panels[vim.api.nvim_get_current_tabpage()] end
+
+  local function status_context_window()
+    local current_win = vim.api.nvim_get_current_win()
+    local panel = current_panel()
+
+    if panel and current_win == panel.win and is_normal_window(panel.target, panel.tabpage) then return panel.target end
+    if panel and not is_normal_window(current_win) and is_normal_window(panel.target, panel.tabpage) then return panel.target end
+    return current_win
+  end
+
+  local function section_in_window(section, args, win)
+    if not is_normal_window(win) then return section(args) end
+    return vim.api.nvim_win_call(win, function() return section(args) end)
+  end
+
   -- Set `use_icons` to true if you have a Nerd Font
-  statusline.setup { use_icons = vim.g.have_nerd_font }
+  statusline.setup {
+    use_icons = vim.g.have_nerd_font,
+    content = {
+      active = function()
+        local mode, mode_hl = statusline.section_mode { trunc_width = 120 }
+        local target = status_context_window()
+        local git = section_in_window(statusline.section_git, { trunc_width = 0 }, target)
+        local diff = section_in_window(statusline.section_diff, { trunc_width = 0 }, target)
+        local diagnostics = section_in_window(statusline.section_diagnostics, { trunc_width = 75 }, target)
+        local lsp = section_in_window(statusline.section_lsp, { trunc_width = 75 }, target)
+
+        return statusline.combine_groups {
+          { hl = mode_hl, strings = { mode } },
+          '%<',
+          { hl = 'MiniStatuslineDevinfo', strings = { git, diff, diagnostics, lsp } },
+        }
+      end,
+      inactive = function()
+        local target = status_context_window()
+        local git = section_in_window(statusline.section_git, { trunc_width = 0 }, target)
+        local diff = section_in_window(statusline.section_diff, { trunc_width = 0 }, target)
+
+        return statusline.combine_groups {
+          { hl = 'MiniStatuslineDevinfo', strings = { git, diff } },
+        }
+      end,
+    },
+  }
 
   -- You can configure sections in the statusline by overriding their
   -- default behavior. For example, here we set the section for
   -- cursor location to LINE:COLUMN
   ---@diagnostic disable-next-line: duplicate-set-field
   statusline.section_location = function() return '%2l:%-2v' end
+
+  local function find_panel_target(panel)
+    local current_win = vim.api.nvim_get_current_win()
+    if current_win ~= panel.win and is_normal_window(current_win, panel.tabpage) then panel.target = current_win end
+
+    if is_normal_window(panel.target, panel.tabpage) and panel.target ~= panel.win then return panel.target end
+
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(panel.tabpage)) do
+      if win ~= panel.win and is_normal_window(win, panel.tabpage) then
+        panel.target = win
+        return win
+      end
+    end
+  end
+
+  local function ensure_status_panel()
+    local tabpage = vim.api.nvim_get_current_tabpage()
+    local panel = status_panels[tabpage]
+    if panel and vim.api.nvim_win_is_valid(panel.win) and vim.api.nvim_buf_is_valid(panel.buf) then return panel end
+
+    local target = vim.api.nvim_get_current_win()
+    local buf = vim.api.nvim_create_buf(false, true)
+    local win = vim.api.nvim_open_win(buf, false, { split = 'below', win = -1, height = 1 })
+
+    panel = { buf = buf, tabpage = tabpage, target = target, win = win }
+    status_panels[tabpage] = panel
+
+    vim.bo[buf].bufhidden = 'wipe'
+    vim.bo[buf].buftype = 'nofile'
+    vim.bo[buf].filetype = 'statusline'
+    vim.bo[buf].modifiable = false
+    vim.bo[buf].swapfile = false
+
+    vim.wo[win].colorcolumn = ''
+    vim.wo[win].cursorline = false
+    vim.wo[win].foldcolumn = '0'
+    vim.wo[win].list = false
+    vim.wo[win].number = false
+    vim.wo[win].relativenumber = false
+    vim.wo[win].scrolloff = 0
+    vim.wo[win].signcolumn = 'no'
+    vim.wo[win].sidescrolloff = 0
+    vim.wo[win].winbar = ''
+    vim.wo[win].winfixbuf = true
+    vim.wo[win].winfixheight = true
+    vim.wo[win].winhighlight = 'Normal:StatusLine,NormalNC:StatusLine,CursorLine:StatusLine,EndOfBuffer:StatusLine'
+    vim.wo[win].wrap = false
+    vim.api.nvim_win_set_height(win, 1)
+
+    return panel
+  end
+
+  local function update_status_panel(panel)
+    if not panel or not vim.api.nvim_win_is_valid(panel.win) or not vim.api.nvim_buf_is_valid(panel.buf) then return end
+
+    local target = find_panel_target(panel)
+    if target == nil then
+      vim.bo[panel.buf].modifiable = true
+      vim.api.nvim_buf_set_lines(panel.buf, 0, -1, false, { '' })
+      vim.bo[panel.buf].modifiable = false
+      return
+    end
+
+    local sections = vim.api.nvim_win_call(
+      target,
+      function()
+        return {
+          filename = statusline.section_filename { trunc_width = 140 },
+          fileinfo = statusline.section_fileinfo { trunc_width = 120 },
+          location = statusline.section_location { trunc_width = 75 },
+        }
+      end
+    )
+    local format = statusline.combine_groups {
+      { hl = 'MiniStatuslineFilename', strings = { sections.filename } },
+      '%<',
+      '%=',
+      { hl = 'MiniStatuslineFileinfo', strings = { sections.fileinfo, sections.location } },
+    }
+    local ok, rendered = pcall(vim.api.nvim_eval_statusline, format, {
+      fillchar = ' ',
+      highlights = true,
+      maxwidth = vim.api.nvim_win_get_width(panel.win),
+      winid = target,
+    })
+    if not ok then return end
+
+    vim.bo[panel.buf].modifiable = true
+    vim.api.nvim_buf_set_lines(panel.buf, 0, -1, false, { rendered.str })
+    vim.bo[panel.buf].modifiable = false
+    vim.api.nvim_buf_clear_namespace(panel.buf, statusline_namespace, 0, -1)
+    vim.api.nvim_buf_add_highlight(panel.buf, statusline_namespace, 'StatusLine', 0, 0, -1)
+
+    for i, highlight in ipairs(rendered.highlights or {}) do
+      local next_highlight = rendered.highlights[i + 1]
+      local end_col = next_highlight and next_highlight.start or -1
+      local groups = highlight.groups or { highlight.group }
+      local group = groups[#groups]
+      if group then vim.api.nvim_buf_add_highlight(panel.buf, statusline_namespace, group, 0, highlight.start, end_col) end
+    end
+  end
+
+  local update_scheduled = false
+  local function schedule_status_panel_update()
+    if vim.v.exiting == 1 then return end
+
+    local panel = current_panel()
+    if panel and vim.api.nvim_win_is_valid(panel.win) then
+      if vim.api.nvim_get_current_win() == panel.win then
+        local target = find_panel_target(panel)
+        vim.schedule(function()
+          if not vim.api.nvim_win_is_valid(panel.win) then return end
+          if target and is_normal_window(target, panel.tabpage) then
+            vim.api.nvim_set_current_win(target)
+          else
+            status_panels[panel.tabpage] = nil
+            vim.cmd 'quit!'
+          end
+        end)
+        return
+      end
+
+      if vim.api.nvim_win_get_height(panel.win) ~= 1 then vim.api.nvim_win_set_height(panel.win, 1) end
+    end
+
+    ensure_status_panel()
+    if update_scheduled then return end
+    update_scheduled = true
+    vim.schedule(function()
+      update_scheduled = false
+      local panel = current_panel()
+      if panel then update_status_panel(panel) end
+    end)
+  end
+
+  local status_panel_group = vim.api.nvim_create_augroup('custom-statusline-panel', { clear = true })
+  vim.api.nvim_create_autocmd({
+    'BufEnter',
+    'BufFilePost',
+    'BufModifiedSet',
+    'CmdlineLeave',
+    'ColorScheme',
+    'CursorMoved',
+    'CursorMovedI',
+    'DiagnosticChanged',
+    'FileType',
+    'LspAttach',
+    'LspDetach',
+    'ModeChanged',
+    'TabEnter',
+    'VimResized',
+    'WinClosed',
+    'WinEnter',
+    'WinResized',
+    'WinScrolled',
+  }, {
+    callback = schedule_status_panel_update,
+    group = status_panel_group,
+  })
+  ensure_status_panel()
+  schedule_status_panel_update()
 
   -- ... and there is more!
   --  Check out: https://github.com/nvim-mini/mini.nvim
