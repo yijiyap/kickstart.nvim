@@ -814,6 +814,9 @@ do
   }
 
   vim.keymap.set({ 'n', 'v' }, '<leader>f', function() require('conform').format { async = true } end, { desc = '[F]ormat buffer' })
+
+  -- MY OWN STUFF
+  vim.keymap.set('n', '<leader>gs', function() require('telescope.builtin').git_status() end, { desc = 'Telescope Git Status' })
 end
 
 -- ============================================================
