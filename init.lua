@@ -995,6 +995,10 @@ do
     lang = 'python3',
   }
 
+  vim.pack.add {
+    'https://github.com/OXY2DEV/markview.nvim',
+  }
+
   require 'kickstart.plugins.debug'
   require 'kickstart.plugins.indent_line'
   require 'kickstart.plugins.lint'
